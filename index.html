@@ -1,0 +1,411 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Calculadora de Proyección de Medios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: herramienta de planificación — formulario fijo a la izquierda, proyección a la derecha, luego auditoría de resultados reales y tabla de referencia editable */
+:root{
+  --bg:#f2f4f6; --surface:#ffffff; --ink:#15202b; --muted:#5a6773; --line:#d8dee4;
+  --accent:#3446c7; --accent-soft:#e6e9fb;
+  --good:#23824a; --good-soft:#e2f3e8; --warn:#9a6a12; --warn-soft:#f8efd9; --bad:#b93434; --bad-soft:#f9e3e3;
+  --bar-a:#3446c7; --bar-b:#8d98e6; --bar-c:#c3c9f2;
+  --f-display:"Familjen Grotesk","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f141a; --surface:#171e26; --ink:#e5eaef; --muted:#94a2af; --line:#2a3541;
+  --accent:#8f9cff; --accent-soft:#232b52;
+  --good:#5cc486; --good-soft:#163323; --warn:#e2b04d; --warn-soft:#3a2f14; --bad:#f07a7a; --bad-soft:#3d1c1c;
+  --bar-a:#8f9cff; --bar-b:#5b67b8; --bar-c:#3a4378; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141a; --surface:#171e26; --ink:#e5eaef; --muted:#94a2af; --line:#2a3541;
+  --accent:#8f9cff; --accent-soft:#232b52;
+  --good:#5cc486; --good-soft:#163323; --warn:#e2b04d; --warn-soft:#3a2f14; --bad:#f07a7a; --bad-soft:#3d1c1c;
+  --bar-a:#8f9cff; --bar-b:#5b67b8; --bar-c:#3a4378; color-scheme:dark}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;padding:0 16px}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 56px;display:grid;gap:28px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(1.6rem,3.4vw,2.2rem);font-weight:700}
+h2{font-size:1.3rem;font-weight:600}
+h3{font-size:1rem;font-weight:600}
+p{margin:0}
+.lead{color:var(--muted);max-width:68ch;margin-top:6px}
+.eyebrow{font-family:var(--f-mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.09em;color:var(--accent)}
+.notice{font-size:.85rem;color:var(--warn);background:var(--warn-soft);border-radius:8px;padding:8px 12px;margin-top:12px;display:inline-block}
+.grid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:grid;gap:16px;min-width:0}
+form.panel{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:860px){form.panel{position:static}}
+.field{display:grid;gap:5px}
+label,.lbl{font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;box-sizing:border-box}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.metrics{display:flex;flex-wrap:wrap;gap:6px}
+.metrics label{all:unset}
+.metrics input{position:absolute;opacity:0;width:1px;height:1px}
+.chip{font-family:var(--f-mono);font-size:.82rem;padding:6px 11px;border:1px solid var(--line);border-radius:999px;cursor:pointer;background:var(--bg);color:var(--ink);display:inline-block}
+.metrics input:checked + .chip{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.metrics input:focus-visible + .chip{outline:2px solid var(--accent);outline-offset:2px}
+.hint{font-size:.8rem;color:var(--muted)}
+.money{position:relative}
+.money span{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-family:var(--f-mono)}
+.money input{padding-left:26px;font-family:var(--f-mono)}
+button{font:inherit;font-weight:500;border-radius:8px;padding:9px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+button:hover{border-color:var(--accent)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.results{display:grid;gap:20px;min-width:0}
+.sum-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:baseline}
+.context{font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.scen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:560px){.scen{grid-template-columns:minmax(0,1fr)}}
+.sc{border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:4px;min-width:0}
+.sc.base{border-color:var(--accent);background:var(--accent-soft)}
+.sc .lbl{font-size:.7rem}
+.big{font-family:var(--f-display);font-size:1.9rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1;overflow-wrap:anywhere}
+.sub{font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.bars{display:grid;gap:8px}
+.bar{display:grid;grid-template-columns:96px minmax(0,1fr) 92px;gap:10px;align-items:center;font-size:.85rem}
+.track{height:14px;background:var(--bg);border-radius:4px;overflow:hidden}
+.fill{height:100%;border-radius:4px}
+.bar .v{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-family:var(--f-mono);font-size:.72rem;padding:2px 7px;border-radius:999px;margin-left:6px}
+.pill.ok{background:var(--good-soft);color:var(--good)}
+.pill.mid{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.na{background:var(--bg);color:var(--muted)}
+.tag-warn{color:var(--bad);font-weight:600}
+.findings{display:grid;gap:10px;padding:0;margin:0;list-style:none}
+.findings li{display:grid;grid-template-columns:10px minmax(0,1fr);gap:12px;align-items:start;padding:12px 14px;border:1px solid var(--line);border-radius:10px}
+.dot{width:10px;height:10px;border-radius:50%;margin-top:6px}
+.dot.bad{background:var(--bad)}.dot.ok{background:var(--good)}.dot.mid{background:var(--warn)}
+.findings b{font-weight:600}
+.drop{border:1.5px dashed var(--line);border-radius:10px;padding:16px;display:grid;gap:10px}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+textarea{font-family:var(--f-mono);font-size:.8rem;min-height:120px;resize:vertical}
+.status{font-size:.85rem;color:var(--muted)}
+.status.err{color:var(--bad)}
+.status.ok{color:var(--good)}
+details>summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:1.1rem}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}
+@media (max-width:860px){.split{grid-template-columns:minmax(0,1fr)}}
+.season-note{font-size:.82rem;color:var(--muted)}
+.season-note b{color:var(--ink)}
+@media (prefers-reduced-motion:no-preference){.fill{transition:width .35s ease}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Planificación de medios · LATAM</div>
+    <h1>Calculadora de Proyección de Medios</h1>
+    <p class="lead">Ingresa presupuesto, canal, cliente, mercado, periodo y métrica de compra. La herramienta proyecta resultados en tres escenarios.</p>
+    <p class="notice">Proyecciones estimadas sobre una tabla de referencia no auditada. Valida siempre con los históricos de la cuenta.</p>
+  </header>
+
+  <section class="grid" aria-label="Proyección">
+    <form class="panel" id="f" autocomplete="off">
+      <h2>Parámetros</h2>
+      <div class="field">
+        <label for="budget">Presupuesto (USD)</label>
+        <div class="money"><span>$</span><input id="budget" type="number" min="1" step="50" value="5000" inputmode="decimal"></div>
+      </div>
+      <div class="field">
+        <label for="canal">Canal</label>
+        <select id="canal">
+          <option>Meta Ads</option><option>Google Ads</option><option>LinkedIn Ads</option><option>TikTok Ads</option>
+        </select>
+      </div>
+      <div class="field" id="objWrap">
+        <label for="obj">Objetivo de campaña (Meta)</label>
+        <select id="obj">
+          <option value="awareness">Reconocimiento (awareness)</option>
+          <option value="trafico">Tráfico</option>
+          <option value="interaccion">Interacción</option>
+          <option value="leads" selected>Clientes potenciales (leads)</option>
+          <option value="ventas">Ventas (conversiones)</option>
+          <option value="app">Promoción de la app</option>
+        </select>
+        <p class="hint" id="objHint"></p>
+      </div>
+      <div class="field" id="subWrap" hidden>
+        <label for="sub">Red de Google Ads</label>
+        <select id="sub"><option value="Google Search">Search</option><option value="Google Display">Display</option><option value="YouTube">YouTube</option><option value="Google PMax">Performance Max (PMax)</option></select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="industria">Cliente</label>
+          <select id="industria"></select>
+        </div>
+        <div class="field">
+          <label for="pais">Mercado</label>
+          <select id="pais"></select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="mes">Mes</label>
+          <select id="mes"></select>
+        </div>
+        <div class="field">
+          <label for="anio">Año</label>
+          <input id="anio" type="number" min="2024" max="2030" value="2026">
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl" id="metLbl">Métrica de costo</span>
+        <div class="metrics" id="metricas" role="radiogroup" aria-labelledby="metLbl"></div>
+        <p class="hint" id="metHint"></p>
+      </div>
+      <div class="field">
+        <label for="propio">Costo histórico o estimado (opcional)</label>
+        <div class="money"><span>$</span><input id="propio" type="number" min="0" step="0.01" placeholder="Reemplaza la referencia"></div>
+        <div class="field" style="gap:6px">
+          <span class="hint">¿Sin histórico? Usa un costo estimado de mercado:</span>
+          <div class="btns" id="estBtns"></div>
+        </div>
+        <p class="hint" id="propioEval" hidden></p>
+        <p class="hint">Si lo ingresas, se usa como escenario base; los otros escenarios aplican ±30%.</p>
+      </div>
+    </form>
+
+    <div class="results">
+      <div class="panel">
+        <div class="sum-head">
+          <h2 id="resTitle">Proyección</h2>
+          <span class="context" id="resCtx"></span>
+        </div>
+        <div class="scen" id="scen"></div>
+        <div class="bars" id="bars" aria-label="Comparación de escenarios"></div>
+        <p class="season-note" id="seasonNote"></p>
+      </div>
+
+      <div class="panel">
+        <h3>Métricas derivadas por escenario</h3>
+        <div class="tbl-wrap"><table id="deriv"></table></div>
+        <p class="hint">Los derivados usan CTR, tasa de conversión, tasa de vista y frecuencia de referencia por canal.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Supuestos aplicados</h3>
+        <div class="tbl-wrap"><table id="supTbl"></table></div>
+        <div class="btns">
+          <button type="button" id="copyProj">Copiar proyección (CSV)</button>
+          <span class="status" id="copyStatus" role="status"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const DEFAULT_BENCH = {
+  "fuente": "Estimación referencial LATAM (no auditada), base Ecuador 2026",
+  "base": {
+    "Meta Ads":      {"CPM":[1.8,2.6,3.8],"CPC":[0.15,0.28,0.5],"CPL":[2.5,4.5,8],"CPV":[0.01,0.02,0.035],"CPR":[0.8,1.6,3]},
+    "Google Search": {"CPC":[0.25,0.5,0.95],"CPL":[4,8,15],"CPR":[2,4.5,9]},
+    "Google Display":{"CPM":[0.6,1.2,2.2],"CPC":[0.08,0.18,0.35],"CPL":[3,7,14],"CPR":[1,2.5,5]},
+    "YouTube":       {"CPM":[1.5,2.8,4.5],"CPC":[0.2,0.45,0.9],"CPV":[0.008,0.016,0.03]},
+    "Google PMax":   {"CPM":[1.5,3,5.5],"CPC":[0.15,0.35,0.7],"CPL":[3,6.5,12],"CPR":[1.5,3.5,7]},
+    "LinkedIn Ads":  {"CPM":[10,18,30],"CPC":[1.5,2.8,5],"CPL":[18,35,70],"CPV":[0.06,0.12,0.25],"CPR":[10,25,50]},
+    "TikTok Ads":    {"CPM":[1,1.9,3.2],"CPC":[0.1,0.22,0.45],"CPL":[2.5,5.5,10],"CPV":[0.004,0.009,0.02],"CPR":[0.8,1.8,3.5]}
+  },
+  "supuestos": {
+    "Meta Ads":      {"ctr":[0.006,0.010,0.016],"cvr":[0.02,0.045,0.09],"viewRate":0.25,"frecuencia":2.5},
+    "Google Search": {"ctr":[0.03,0.05,0.08],"cvr":[0.04,0.07,0.12],"viewRate":null,"frecuencia":1.5},
+    "Google Display":{"ctr":[0.002,0.005,0.009],"cvr":[0.008,0.02,0.04],"viewRate":null,"frecuencia":3},
+    "YouTube":       {"ctr":[0.002,0.005,0.01],"cvr":[0.005,0.01,0.025],"viewRate":0.3,"frecuencia":2.5},
+    "Google PMax":   {"ctr":[0.005,0.01,0.02],"cvr":[0.02,0.045,0.08],"viewRate":null,"frecuencia":2.5},
+    "LinkedIn Ads":  {"ctr":[0.003,0.006,0.01],"cvr":[0.04,0.08,0.13],"viewRate":0.25,"frecuencia":2.5},
+    "TikTok Ads":    {"ctr":[0.004,0.009,0.015],"cvr":[0.01,0.025,0.05],"viewRate":0.2,"frecuencia":2.5}
+  },
+  "clientes": {
+    "Hertz":            {"vertical":"Renta de autos","factor":1.1},
+    "Interbus":         {"vertical":"Transporte turístico","factor":1.0},
+    "Papa Johns":       {"vertical":"Comida rápida / delivery","factor":0.85},
+    "Dollar Car":       {"vertical":"Renta de autos","factor":1.1},
+    "Thrifty":          {"vertical":"Renta de autos","factor":1.1},
+    "Proauto livianos": {"vertical":"Automotriz, vehículos livianos","factor":1.3},
+    "Proauto Pesados":  {"vertical":"Automotriz, vehículos pesados (B2B)","factor":1.45},
+    "Geely":            {"vertical":"Automotriz, vehículos livianos","factor":1.3},
+    "GAC":              {"vertical":"Automotriz, vehículos livianos","factor":1.3}
+  },
+  "pais": {"Ecuador":1.0,"Costa Rica":1.15},
+  "estacionalidad": [0.85,0.9,0.95,1.0,1.15,1.0,0.95,1.0,1.0,1.05,1.35,1.3],
+  "notasMes": {"1":"post-temporada, subasta más barata","5":"Día de la Madre","11":"Black Friday / Cyber","12":"Navidad y cierre de año"},
+  "ajusteAnual": 0.05,
+  "anioBase": 2026
+};
+const META_OBJ = {
+  awareness:  {nombre:"Reconocimiento", hint:"Optimiza alcance y recuerdo de marca. Compra por CPM o por ThruPlay (CPV).",
+               base:{"CPM":[1.2,1.9,2.8],"CPV":[0.008,0.015,0.03]}, sup:{ctr:[0.003,0.006,0.01]}},
+  trafico:    {nombre:"Tráfico", hint:"Optimiza clics al enlace o visitas a la página de destino.",
+               base:{"CPM":[1.8,2.6,3.8],"CPC":[0.08,0.16,0.3]}, sup:{ctr:[0.01,0.016,0.025]}},
+  interaccion:{nombre:"Interacción", hint:"Optimiza reacciones, comentarios, mensajes o reproducciones. CPR = costo por interacción.",
+               base:{"CPM":[1.5,2.2,3.2],"CPV":[0.008,0.016,0.03],"CPR":[0.01,0.03,0.07]}, res:"Interacciones"},
+  leads:      {nombre:"Clientes potenciales", hint:"Optimiza formularios instantáneos, mensajes o leads en sitio web.",
+               base:{"CPM":[2.2,3.2,4.8],"CPC":[0.2,0.4,0.75],"CPL":[2.5,4.5,8]}, sup:{cvr:[0.03,0.06,0.1]}},
+  ventas:     {nombre:"Ventas", hint:"Optimiza conversiones en sitio (compra, reserva, cotización) medidas con píxel/CAPI. CPR = costo por conversión.",
+               base:{"CPM":[2.5,3.6,5.5],"CPC":[0.25,0.5,0.9],"CPR":[5,12,25]}, sup:{cvr:[0.01,0.02,0.04]}, res:"Conversiones"},
+  app:        {nombre:"Promoción de la app", hint:"Optimiza instalaciones o eventos en la app. CPR = costo por instalación.",
+               base:{"CPM":[2,3,4.5],"CPC":[0.15,0.3,0.6],"CPR":[0.4,0.9,1.8]}, res:"Instalaciones"}
+};
+const esMeta = ch => ch==="Meta Ads";
+const objSel = () => META_OBJ[$("obj").value];
+const baseDe = ch => esMeta(ch) ? objSel().base : B.base[ch];
+const supDe = ch => esMeta(ch) ? {...B.supuestos[ch], ...(objSel().sup||{})} : B.supuestos[ch];
+const resLbl = (ch,met) => (met==="CPR" && esMeta(ch) && objSel().res) ? objSel().res : MET_RES[met];
+const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const MET_DESC = {CPM:"Costo por mil impresiones",CPC:"Costo por clic",CPL:"Costo por lead",CPV:"Costo por vista de video",CPR:"Costo por resultado (según el objetivo de campaña)"};
+const MET_RES = {CPM:"Impresiones",CPC:"Clics",CPL:"Leads",CPV:"Vistas",CPR:"Resultados"};
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nf0 = new Intl.NumberFormat("es-EC",{maximumFractionDigits:0});
+const usd = v => { if(v==null||!isFinite(v)) return "—"; const d = v<0.1?3:2; return "$"+v.toLocaleString("es-EC",{minimumFractionDigits:d,maximumFractionDigits:d}); };
+const num = v => (v==null||!isFinite(v)) ? "—" : nf0.format(Math.round(v));
+const pct = (v,d=2) => (v==null||!isFinite(v)) ? "—" : (v*100).toLocaleString("es-EC",{maximumFractionDigits:d})+"%";
+
+const B = structuredClone(DEFAULT_BENCH);
+
+function fillSelect(sel, items, keep){ const cur = keep ?? sel.value; sel.innerHTML = items.map(i=>`<option>${esc(i)}</option>`).join(""); if(items.includes(cur)) sel.value = cur; }
+function initSelects(){
+  fillSelect($("industria"), Object.keys(B.clientes), $("industria").value || "Geely");
+  fillSelect($("pais"), Object.keys(B.pais), $("pais").value || "Ecuador");
+  if(!$("mes").options.length){ $("mes").innerHTML = MESES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join(""); $("mes").value = "11"; }
+}
+function canalInterno(){ const c=$("canal").value; return c==="Google Ads" ? $("sub").value : c; }
+function renderMetricas(){
+  const ch = canalInterno(); const mets = Object.keys(baseDe(ch)||{});
+  $("objWrap").hidden = !esMeta(ch);
+  if(esMeta(ch)) $("objHint").textContent = objSel().hint;
+  const cur = document.querySelector('input[name="met"]:checked')?.value || "CPL";
+  const pick = mets.includes(cur) ? cur : mets[0];
+  $("metricas").innerHTML = mets.map(m=>`<label><input type="radio" name="met" id="met-${m}" value="${m}" ${m===pick?"checked":""}><span class="chip" title="${esc(MET_DESC[m]||m)}">${m}</span></label>`).join("");
+  const quien = esMeta(ch) ? `El objetivo ${objSel().nombre}` : ch;
+  const desc = (pick==="CPR" && esMeta(ch) && objSel().res) ? `Costo por ${objSel().res.toLowerCase().replace(/es$|s$/,"")}` : (MET_DESC[pick]||"");
+  $("metHint").textContent = desc + (mets.length<5 ? `. ${quien} no admite: ${["CPM","CPC","CPL","CPV","CPR"].filter(x=>!mets.includes(x)).join(", ")}.` : ".");
+}
+function factores(ch, industria, pais, mes, anio){
+  const fi = B.clientes[industria]?.factor ?? 1, fp = B.pais[pais] ?? 1, fs = B.estacionalidad[mes-1] ?? 1;
+  const fa = Math.pow(1+(B.ajusteAnual||0), (anio-(B.anioBase||2026)));
+  return {fi,fp,fs,fa,total:fi*fp*fs*fa};
+}
+function proyectar(ch, met, budget, costo, F){
+  const s = supDe(ch) || {ctr:[0,0.01,0],cvr:[0,0.03,0],frecuencia:2.5};
+  const ctr=s.ctr[1], cvr=s.cvr[1], vr=s.viewRate, fr=s.frecuencia||2.5;
+  let imp=null, clicks=null, leads=null, views=null, res=null;
+  if(met==="CPM"){ imp=budget/costo*1000; clicks=imp*ctr; leads=clicks*cvr; res=imp; }
+  else if(met==="CPC"){ clicks=budget/costo; imp=clicks/ctr; leads=clicks*cvr; res=clicks; }
+  else if(met==="CPL"){ leads=budget/costo; clicks=leads/cvr; imp=clicks/ctr; res=leads; }
+  else if(met==="CPV"){ views=budget/costo; if(vr){ imp=views/vr; clicks=imp*ctr; } res=views; }
+  else if(met==="CPR"){ res=budget/costo; const bt=baseDe(ch), cpm=bt.CPM; if(cpm){ imp=budget/(cpm[1]*F.total)*1000; clicks=imp*ctr; } else if(bt.CPC){ clicks=budget/(bt.CPC[1]*F.total); imp=clicks/ctr; } }
+  return {costo,res,imp,clicks,leads,views,reach: imp?imp/fr:null, cpm: imp?budget/imp*1000:null, cpc: clicks?budget/clicks:null};
+}
+let lastProj = null;
+function calcular(){
+  const budget = Math.max(0, parseFloat($("budget").value)||0);
+  const ch = canalInterno(), met = document.querySelector('input[name="met"]:checked')?.value;
+  const BT = baseDe(ch);
+  if(!met || !BT || !BT[met]) return;
+  const ind=$("industria").value, pais=$("pais").value, mes=+$("mes").value, anio=parseInt($("anio").value)||2026;
+  const F = factores(ch, ind, pais, mes, anio);
+  const r = BT[met];
+  const refAdj = r.map(v=>v*F.total), pin = $("propio"), est = pin.dataset.est;
+  const NIV = ["Bajo","Medio","Alto"];
+  if(est!=null && est!==""){ pin.value = refAdj[+est].toFixed(refAdj[+est]<0.1?3:2); }
+  $("estBtns").innerHTML = refAdj.map((v,i)=>`<button type="button" class="${String(i)===est?"primary":""}" data-i="${i}" aria-pressed="${String(i)===est}">${NIV[i]} ${usd(v)}</button>`).join("");
+  const propio = parseFloat(pin.value);
+  const costos = propio>0 ? [propio*0.7, propio, propio*1.3] : r.map(v=>v*F.total);
+  const names = ["Optimista","Base","Conservador"];
+  const P = costos.map(c=>proyectar(ch,met,budget,c,F));
+  const pe = $("propioEval");
+  if(propio>0 && est!=null && est!==""){
+    pe.innerHTML = `<span class="pill mid" style="margin-left:0">Estimado · ${NIV[+est].toLowerCase()}</span> Costo de referencia de mercado para ${esc(ind)} en ${esc(pais)}, ${MESES[mes-1]}. Reemplázalo por el histórico real cuando lo tengas.`;
+    pe.hidden = false;
+  } else if(propio>0){
+    const ref = refAdj, e = evalCost(propio, ref);
+    const lbl = {ok:"Mejor que mercado", mid:"En rango", bad:"Sobre mercado"}[e.c];
+    const extremo = e.d < -0.6 || e.d > 1.5;
+    pe.innerHTML = `<span class="pill ${e.c}" style="margin-left:0">${lbl} · ${devTxt(e)}</span> vs. media de referencia ${usd(ref[1])} (rango ${usd(ref[0])} – ${usd(ref[2])}).` +
+      (extremo ? ` <span class="tag-warn">Desviación muy alta: confirma que el costo corresponde a ${met} en ${esc(ch)}.</span>` : "");
+    pe.hidden = false;
+  } else pe.hidden = true;
+  const objNom = esMeta(ch) ? objSel().nombre : "";
+  lastProj = {budget,ch,objNom,met,ind,pais,mes,anio,F,P,names,propio:propio>0?propio:null};
+  const canalLbl = $("canal").value==="Google Ads" ? `Google Ads · ${$("sub").selectedOptions[0].text}` : esMeta(ch) ? `Meta Ads · ${objNom}` : ch;
+  const RL = resLbl(ch,met);
+  $("resTitle").textContent = `${RL} proyectad${/ones$|siones$/.test(RL)||RL==="Interacciones"||RL==="Conversiones"||RL==="Instalaciones"||RL==="Impresiones"||RL==="Vistas"?"as":"os"}`;
+  $("resCtx").textContent = `${canalLbl} · ${ind} · ${pais} · ${MESES[mes-1]} ${anio} · ${usd(budget).replace(/[.,]00$/,"")}`;
+  const order=[2,1,0];
+  $("scen").innerHTML = order.map(i=>`<div class="sc ${i===1?"base":""}"><span class="lbl">${names[i]}</span><span class="big">${num(P[i].res)}</span><span class="sub">${met} ${usd(P[i].costo)}</span></div>`).join("");
+  const max = Math.max(...P.map(p=>p.res||0)) || 1;
+  const cols=["var(--bar-a)","var(--bar-b)","var(--bar-c)"];
+  $("bars").innerHTML = order.map((i,k)=>`<div class="bar"><span>${names[i]}</span><div class="track"><div class="fill" style="width:${(P[i].res/max*100).toFixed(1)}%;background:${[cols[2],cols[0],cols[1]][k]}"></div></div><span class="v">${num(P[i].res)}</span></div>`).join("");
+  const nota = B.notasMes?.[String(mes)];
+  const noLatam = (B.paisNoLatam||[]).includes(pais);
+  $("seasonNote").innerHTML = `Ajuste estacional de ${MESES[mes-1]}: <b>×${F.fs.toFixed(2)}</b>${nota?` (${esc(nota)})`:""}.` + (noLatam?` <span class="tag-warn">${esc(pais)} usa referencia no-LATAM.</span>`:"") + (propio>0?(est!=null&&est!==""?` Base calculada con el costo estimado ${NIV[+est].toLowerCase()} (escenarios ±30%).`:` Base calculada con tu costo histórico.`):"");
+  const rows = [
+    ["Costo unitario ("+met+")", p=>usd(p.costo)],
+    [RL+" (resultado principal)", p=>num(p.res)],
+    ["Impresiones", p=>num(p.imp)],
+    ["Alcance estimado", p=>num(p.reach)],
+    ["Clics", p=>num(p.clicks)],
+    ["CPM implícito", p=>usd(p.cpm)],
+    ["CPC implícito", p=>usd(p.cpc)],
+  ];
+  const muestraLeads = !esMeta(ch) || $("obj").value==="leads" || $("obj").value==="ventas";
+  const leadLbl = esMeta(ch) && $("obj").value==="ventas" ? "Conversiones estimadas" : "Leads estimados";
+  if(met!=="CPL" && P[1].leads!=null && met!=="CPR" && muestraLeads) rows.push([leadLbl, p=>num(p.leads)]);
+  $("deriv").innerHTML = `<thead><tr><th>Métrica</th>${order.map(i=>`<th class="n">${names[i]}</th>`).join("")}</tr></thead><tbody>`+
+    rows.map(([l,f])=>`<tr><td>${l}</td>${order.map(i=>`<td class="n">${f(P[i])}</td>`).join("")}</tr>`).join("")+"</tbody>";
+  const s = supDe(ch)||{};
+  $("supTbl").innerHTML = `<thead><tr><th>Supuesto</th><th class="n">Valor</th></tr></thead><tbody>
+    <tr><td>Referencia ${met} ${esc(canalLbl)} [bajo · medio · alto]</td><td class="n">${r.map(usd).join(" · ")}</td></tr>
+    <tr><td>Cliente: ${esc(ind)} (${esc(B.clientes[ind]?.vertical||"")})</td><td class="n">×${F.fi.toFixed(2)}</td></tr>
+    <tr><td>Mercado: ${esc(pais)}${noLatam?' <span class="pill bad">no-LATAM</span>':""}</td><td class="n">×${F.fp.toFixed(2)}</td></tr>
+    <tr><td>Estacionalidad: ${MESES[mes-1]}</td><td class="n">×${F.fs.toFixed(2)}</td></tr>
+    <tr><td>Ajuste anual (${anio} vs ${B.anioBase})</td><td class="n">×${F.fa.toFixed(3)}</td></tr>
+    <tr><td><b>Factor total sobre referencia</b></td><td class="n"><b>×${F.total.toFixed(2)}</b></td></tr>
+    <tr><td>CTR · conversión · frecuencia</td><td class="n">${pct(s.ctr?.[1])} · ${pct(s.cvr?.[1],1)} · ${s.frecuencia??"—"}</td></tr>
+    <tr><td>Fuente</td><td>${esc(B.fuente||"")}</td></tr></tbody>`;
+}
+function projCSV(){
+  const L=lastProj; if(!L) return "";
+  const h=["escenario","canal","objetivo","cliente","mercado","mes","anio","presupuesto_usd","metrica","costo_unitario","resultado","impresiones","alcance","clics","cpm","cpc"];
+  const r=L.P.map((p,i)=>[L.names[i],L.ch,L.objNom,L.ind,L.pais,MESES[L.mes-1],L.anio,L.budget,L.met,p.costo?.toFixed(4),Math.round(p.res||0),Math.round(p.imp||0),Math.round(p.reach||0),Math.round(p.clicks||0),p.cpm?.toFixed(2)??"",p.cpc?.toFixed(3)??""]);
+  return [h,...r].map(a=>a.map(v=>/[,"]/.test(String(v))?`"${String(v).replace(/"/g,'""')}"`:v).join(",")).join("\n");
+}
+async function copiar(text, statusEl, msg, fallbackEl){
+  try { await navigator.clipboard.writeText(text); statusEl.className="status ok"; statusEl.textContent=msg; }
+  catch(e){ if(fallbackEl){ fallbackEl.focus(); fallbackEl.select(); statusEl.className="status"; statusEl.textContent="Texto seleccionado: cópialo con Ctrl/Cmd + C."; } else { statusEl.className="status err"; statusEl.textContent="El navegador bloqueó el portapapeles."; } }
+}
+
+const evalCost = (v,r) => { if(!r||!isFinite(v)) return {c:"na",d:null}; return {c: v<r[0]?"ok": v>r[2]?"bad":"mid", d:v/r[1]-1}; };
+const devTxt = e => e.d==null ? "sin ref." : (e.d>=0?"+":"")+Math.round(e.d*100)+"%";
+$("copyProj").addEventListener("click", ()=>copiar(projCSV(),$("copyStatus"),"Proyección copiada. Pégala en Sheets o Excel."));
+
+/* ---------- Eventos del formulario ---------- */
+$("f").addEventListener("submit", e=>e.preventDefault());
+$("estBtns").addEventListener("click", e=>{ const b=e.target.closest("button[data-i]"); if(!b) return; const pin=$("propio");
+  if(pin.dataset.est===b.dataset.i){ delete pin.dataset.est; pin.value=""; } else pin.dataset.est=b.dataset.i; calcular(); });
+$("propio").addEventListener("input", ()=>{ delete $("propio").dataset.est; });
+$("canal").addEventListener("change", ()=>{ $("subWrap").hidden = $("canal").value!=="Google Ads"; renderMetricas(); calcular(); });
+$("sub").addEventListener("change", ()=>{ renderMetricas(); calcular(); });
+$("obj").addEventListener("change", ()=>{ renderMetricas(); calcular(); });
+$("metricas").addEventListener("change", ()=>{ renderMetricas(); calcular(); });
+["budget","industria","pais","mes","anio","propio"].forEach(id=>$(id).addEventListener("input", calcular));
+
+initSelects(); renderMetricas(); calcular();
+</script>
+
+</body></html>
